@@ -1,5 +1,7 @@
 # prerelation
 
+[![DOI](https://zenodo.org/badge/1348684101.svg)](https://doi.org/10.5281/zenodo.22132819) [![PyPI](https://img.shields.io/pypi/v/prerelation.svg)](https://pypi.org/project/prerelation/)
+
 A coefficient for **prerequisite relations** between traits reported on a
 common anchored scale.
 
@@ -171,8 +173,9 @@ regenerates every golden output from the fixtures and asserts equality at
 ## Citation
 
 The methodological paper introducing the coefficient is in preparation. To
-cite the software, use the metadata in `CITATION.cff`; an archived DOI will
-be added there upon release (Zenodo, DOI to follow).
+cite the software, use the metadata in `CITATION.cff` (concept DOI
+[10.5281/zenodo.22132819](https://doi.org/10.5281/zenodo.22132819), all versions;
+v0.2.0 archive: 10.5281/zenodo.22132820).
 
 ## Status
 
