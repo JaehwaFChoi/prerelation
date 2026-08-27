@@ -1,0 +1,45 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "prerelation"
+version = "0.2.0"
+description = "The prerelation coefficient: measuring prerequisite relations between traits reported on anchored bounded scales."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+authors = [{ name = "Jaehwa Choi", email = "jaechoi@gwu.edu" }]
+keywords = [
+  "psychometrics", "prerequisite", "learning hierarchy", "bounded latent variable",
+  "cognitive diagnosis", "attribute hierarchy", "necessary condition",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "Intended Audience :: Education",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Mathematics",
+]
+dependencies = ["numpy>=1.21", "scipy>=1.7", "pandas>=1.3"]
+
+[project.optional-dependencies]
+ctm = ["cogtraitmodel>=0.2.2"]
+dev = ["pytest>=7.0", "pytest-cov"]
+
+[project.urls]
+Homepage = "https://github.com/JaehwaFChoi/prerelation"
+Repository = "https://github.com/JaehwaFChoi/prerelation"
+Issues = "https://github.com/JaehwaFChoi/prerelation/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["prerelation"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["slow: long-running verification (permutation level study)"]

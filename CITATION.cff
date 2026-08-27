@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+title: "prerelation: the prerelation coefficient for prerequisite relations on anchored scales"
+message: "If you use this software, please cite it as below."
+type: software
+authors:
+  - family-names: Choi
+    given-names: Jaehwa
+    email: jaechoi@gwu.edu
+    affiliation: "The George Washington University"
+version: 0.2.0
+license: MIT
+repository-code: "https://github.com/JaehwaFChoi/prerelation"
+keywords:
+  - psychometrics
+  - prerequisite relation
+  - learning hierarchy
+  - bounded latent variable
+  - cognitive diagnosis
