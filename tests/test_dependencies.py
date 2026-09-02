@@ -7,6 +7,7 @@ through the optional plausible-value layer.
 """
 
 import ast
+import importlib.metadata
 import pathlib
 
 import prerelation
@@ -63,5 +64,8 @@ def test_pv_imports_the_scoring_package_lazily():
                 assert node.col_offset > 0, "cogtraitmodel imported at module level"
 
 
-def test_version_is_a_development_marker():
-    assert prerelation.__version__ == "0.2.0"
+def test_version_matches_the_installed_distribution():
+    """Compare the package against the BUILD, not against a third copy of the
+    number. The previous form asserted equality with the literal "0.2.0" and so
+    stayed green while pyproject.toml moved to 0.3.0 and then 0.3.1."""
+    assert prerelation.__version__ == importlib.metadata.version("prerelation")
