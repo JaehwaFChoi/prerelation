@@ -33,6 +33,7 @@ Modules
 ``scan``     all pairs, BH-FDR, cycle check, transitive reduction
 ``ceiling``  monotone quantile ceiling and the ceiling-referenced variant
 ``pv``       plausible-value correction for scoring error (optional extra)
+``reference`` the admissible reference class and the exact upper envelope
 ``study``    the simulation frame: one config dict in, tidy table out
 
 Correctness standard
@@ -56,10 +57,11 @@ Quick start
 
 from __future__ import annotations
 
-from . import ceiling, core, pv, scan, study
+from . import ceiling, core, pv, reference, scan, study
 from .ceiling import CeilingFit, ceiling_fit, prereq_index_referenced
 from .core import DELTA, MIN_INTERIOR, TOP_Q, direction, perm_pvalue, prereq_index
 from .pv import ctm_posterior, draw_pv, pv_correct
+from .reference import Admissibility, admissibility, interior_q, pi_envelope, prereq_index_family
 from .scan import ScanResult, bh_fdr, find_cycles, scan as scan_pairs, transitive_reduction
 from .study import EXAMPLE_CONFIG, run_study
 
@@ -83,6 +85,12 @@ __all__ = [
     "ceiling_fit",
     "CeilingFit",
     "prereq_index_referenced",
+    # reference class and envelope
+    "admissibility",
+    "Admissibility",
+    "interior_q",
+    "prereq_index_family",
+    "pi_envelope",
     # plausible values
     "pv_correct",
     "draw_pv",
@@ -95,6 +103,7 @@ __all__ = [
     "scan",
     "ceiling",
     "pv",
+    "reference",
     "study",
     "__version__",
 ]

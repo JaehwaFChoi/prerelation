@@ -35,6 +35,7 @@ import os
 import numpy as np
 
 from prerelation.core import direction, perm_pvalue, prereq_index
+from prerelation.reference import pi_envelope
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 N_PERM = 199
@@ -81,6 +82,14 @@ def synthetic_fixtures():
 
 def ecpe_fixture():
     path = os.path.join(HERE, "ecpe_theta_full.csv")
+    if not os.path.exists(path):
+        # The full theta table is not part of the repository. Regenerating
+        # from the committed fixture is exact: the CSV stores repr(float64).
+        path = os.path.join(HERE, "fixture_ecpe_slice.csv")
+        with open(path, newline="") as fh:
+            rows = list(csv.reader(fh))[1:]
+        return (np.array([float(r[0]) for r in rows]),
+                np.array([float(r[1]) for r in rows]))
     with open(path, newline="") as fh:
         rows = list(csv.reader(fh))
     header, data = rows[0], rows[1:201]  # first 200 persons, file order
@@ -100,6 +109,8 @@ def components(x, y):
     res = prereq_index(x, y)
     rev = prereq_index(y, x)
     dl = direction(x, y)
+    env = pi_envelope(x, y)
+    assert env["attained"], "closed-form supremum not attained on a fixture"
     u = np.clip(y / np.maximum(x, 1e-12), 0.0, 1.0)
     ceil_mask = u >= 1.0 - DELTA
     x_top = x >= np.quantile(x, TOP_Q)
@@ -119,6 +130,15 @@ def components(x, y):
         "PI": repr(res["PI"]),
         "PI_reverse": repr(rev["PI"]),
         "Delta": repr(dl[0]),
+        # reference class and envelope (Propositions 2.20-2.21): the exact
+        # supremum of q over the admissible class B, the vacuous infimum
+        # 1/m, and the upper envelope PI_hi = A1 * ell * sup_q. All closed
+        # forms; n_tail_band counts interior points with t >= 1 - delta.
+        "n_tail_band": env["n_tail"],
+        "D_star": repr(env["D_star"]),
+        "sup_q": repr(env["sup_q"]),
+        "inf_q": repr(env["inf_q"]),
+        "PI_hi": repr(env["PI_hi"]),
     }
 
 

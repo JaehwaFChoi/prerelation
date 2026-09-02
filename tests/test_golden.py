@@ -15,6 +15,7 @@ import numpy as np
 import pytest
 
 from prerelation.core import direction, prereq_index
+from prerelation.reference import pi_envelope
 
 GOLDEN = os.path.join(os.path.dirname(os.path.abspath(__file__)), "golden")
 TOL = 1e-12
@@ -86,3 +87,15 @@ def test_permutation_contract_pinned(name):
     cnt = sum(prereq_index(x, y[P[r]])["PI"] >= obs for r in range(n_perm))
     p = (cnt + 1) / (n_perm + 1)
     assert p == float(exp["perm_p"]), (name, p, exp["perm_p"])
+
+
+@pytest.mark.parametrize("name", FIXTURES)
+def test_envelope_pinned(name):
+    """Reference class and envelope (closed forms) pinned per fixture."""
+    exp = EXPECTED[name]
+    x, y = load_fixture(name)
+    env = pi_envelope(x, y)
+    assert env["n_tail"] == exp["n_tail_band"]
+    for key in ("D_star", "sup_q", "inf_q", "PI_hi"):
+        assert abs(env[key] - float(exp[key])) <= TOL, (name, key)
+    assert env["attained"]

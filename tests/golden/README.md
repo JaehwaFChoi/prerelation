@@ -25,11 +25,34 @@ code paths the smooth synthetic sets do not.
 
 For each fixture, `expected.json` records `n`, `v`, `v0`, `A1`,
 `mass_ceiling_band`, `mass_interior`, `n_interior`, `p1_top`, `q`, `ell`,
-`A2`, `PI`, `PI_reverse`, `Delta` and `perm_p`. Every float is stored as a
+`A2`, `PI`, `PI_reverse`, `Delta`, `perm_p`, and the reference-class
+quantities `n_tail_band`, `D_star`, `sup_q`, `inf_q`, `PI_hi` (below).
+Every float is stored as a
 Python `repr` string so it parses back to the identical float64. Component
 definitions (`delta = 0.05`, `TOP_Q = 0.8`, the ceiling band
 `u >= 1 - delta`, the V-statistic baseline with the diagonal included) are
 in `prerelation/core.py` and `tests/oracle/prereq_index_v2.py`.
+
+## The reference class and the envelope
+
+`prerelation/reference.py` generalises the interior component to a
+declared reference law `F0` and bounds it over the admissible class
+`B = { F0 : F0(t) >= t on [1 - delta, 1] }`. With `t_(1) <= ... <= t_(m)`
+the sorted rescaled interior (`t = u_interior / (1 - delta)`, `m =
+n_interior`) and `i/m` the empirical index:
+
+| key | definition |
+|---|---|
+| `n_tail_band` | `#{ i : t_(i) >= 1 - delta }` (the threshold is on the rescaled `t` scale) |
+| `D_star` | `max { (t_(i) - i/m)_+ : t_(i) >= 1 - delta }`, `0` if the set is empty |
+| `sup_q` | `1 - D_star`, the exact supremum of `q` over `B`, attained by `F0*(t) = max(ECDF_m(t), t * 1{t >= 1 - delta})` |
+| `inf_q` | `1 / m`, the vacuous infimum, attained by the point mass at 0 |
+| `PI_hi` | `A1 * ell * sup_q`, the upper envelope of the coefficient |
+
+When the interior guard fires (`n_interior < max(10, 0.05 n)`, the
+`equivalence` fixture) every entry is `0` (`n_tail_band = 0`). A port
+reproduces these from the fixture alone; no reference law has to be
+supplied, because both ends are closed forms.
 
 ## The permutation contract
 
