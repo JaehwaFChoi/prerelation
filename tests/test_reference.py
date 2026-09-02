@@ -37,6 +37,8 @@ GOLDEN = os.path.join(os.path.dirname(os.path.abspath(__file__)), "golden")
 with open(os.path.join(GOLDEN, "expected.json")) as _fh:
     _EXP = __import__("json").load(_fh)
 EXPECTED_PI = {k: v["PI"] for k, v in _EXP.items() if not k.startswith("_")}
+# The golden contract compares floats at 1e-12; see tests/golden/README.md.
+GOLDEN_TOL = 1e-12
 FIXTURES = ["product", "min", "independent", "equivalence", "partial_equivalence", "ecpe_slice"]
 TOL = 1e-12
 
