@@ -192,15 +192,22 @@ def test_positive_part_in_d_star_matters():
 
 @pytest.mark.parametrize("name", FIXTURES)
 def test_family_member_at_uniform_equals_pi_bitwise(name):
-    """PI(Uniform) == prereq_index PI with ==, not a tolerance; the key PI
-    is already in expected.json, so no new golden key is needed."""
+    """The family member at Uniform IS the coefficient. Within one process the
+    two are compared with ``==`` and not a tolerance, which is what forces the
+    multiplication order to match rather than merely agree.
+
+    The committed golden value is compared at the golden contract's tolerance.
+    Bit-identity against a stored literal is a property of the build that wrote
+    the literal, not of the definition: the dense double sum behind ``v0``
+    moves by one unit in the last place between NumPy versions, which is why
+    ``tests/golden`` compares at 1e-12 throughout. The key ``PI`` is already in
+    expected.json, so no new golden key is needed."""
     x, y = load_fixture(name)
     fam = prereq_index_family(x, y)
     ref = prereq_index(x, y)
     assert fam["PI"] == ref["PI"]
     assert fam["A2"] == ref["A2"] and fam["q"] == ref["q"]
-    assert fam["PI"] == float(EXPECTED_PI[name])
-
+    assert abs(fam["PI"] - float(EXPECTED_PI[name])) <= GOLDEN_TOL
 
 @pytest.mark.parametrize("name", [n for n in FIXTURES if n != "equivalence"])
 def test_family_member_is_bounded_by_the_envelope(name):
