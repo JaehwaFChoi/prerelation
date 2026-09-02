@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "prerelation"
-version = "0.3.0"
+version = "0.3.1"
 description = "The prerelation coefficient: measuring prerequisite relations between traits reported on anchored bounded scales."
 readme = "README.md"
 requires-python = ">=3.9"
