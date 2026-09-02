@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.3.1 — 2026-09-02
+
+Test-only. **The library is byte-identical to 0.3.0** and every computational
+output is unchanged.
+
+- `test_family_member_at_uniform_equals_pi_bitwise` compared a freshly
+  computed `PI` against the literal stored in `tests/golden/expected.json`
+  with `==`. That is a claim about the build that wrote the literal rather
+  than about the definition: the dense double sum behind `v0` accumulates in
+  a different order between NumPy generations, moving `A1` and hence `PI` by
+  one unit in the last place on the `min` and `ecpe_slice` fixtures. Because
+  NumPy 2.3 requires Python 3.11, the comparison held on 3.11 and 3.12 and
+  failed on 3.9 and 3.10. It now uses the golden contract's tolerance of
+  1e-12, which is what `tests/golden` applies to every float. The two
+  same-process assertions are unchanged and still use `==`.
+- The publish workflow now runs the test suite on the oldest and newest
+  supported Python versions before uploading. 0.3.0 was published while the
+  suite was failing on 3.9 and 3.10, because nothing connected the two
+  workflows.
+  
 ## 0.3.0 — 2026-09-02
 
 Adds the admissible reference class and the exact upper envelope. **No
