@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.2 — 2026-09-02
+
+Test-only and metadata. **The library's computational behaviour is unchanged.**
+
+- `__version__` is now derived from the installed distribution metadata rather
+  than written out a second time. It had read `0.2.0` since the 0.2.0 release
+  while `pyproject.toml` moved to 0.3.0 and then 0.3.1, so the package
+  disagreed with its own build in both of those releases.
+- The test that existed for this compared `__version__` against a third
+  hard-coded copy of the same number and stayed green throughout. It now
+  compares the package against `importlib.metadata.version`, which is the
+  authority it was always supposed to be checking.
+  
 ## 0.3.1 — 2026-09-02
 
 Test-only. **The library is byte-identical to 0.3.0** and every computational
