@@ -56,7 +56,7 @@ Quick start
 """
 
 from __future__ import annotations
-
+from importlib.metadata import PackageNotFoundError, version as _dist_version
 from . import ceiling, core, pv, reference, scan, study
 from .ceiling import CeilingFit, ceiling_fit, prereq_index_referenced
 from .core import DELTA, MIN_INTERIOR, TOP_Q, direction, perm_pvalue, prereq_index
@@ -65,7 +65,10 @@ from .reference import Admissibility, admissibility, interior_q, pi_envelope, pr
 from .scan import ScanResult, bh_fdr, find_cycles, scan as scan_pairs, transitive_reduction
 from .study import EXAMPLE_CONFIG, run_study
 
-__version__ = "0.2.0"
+try:  # single source of truth: the installed distribution metadata
+    __version__ = _dist_version("prerelation")
+except PackageNotFoundError:  # an uninstalled source tree has no metadata to read
+    __version__ = "0.0.0+unknown"
 
 __all__ = [
     # coefficient
