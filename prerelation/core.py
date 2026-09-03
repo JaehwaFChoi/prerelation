@@ -44,6 +44,13 @@ above ``DENSE_MAX_N`` (see ``_baseline_mean``).
 The defaults ``delta = 0.05``, ``TOP_Q = 0.8`` and
 ``MIN_INTERIOR = max(10, 0.05 n)`` are fixed. A small-sample adaptation of
 TOP_Q is an open question and is deliberately *not* implemented here.
+
+Since 0.4.0 the top-set quantile and the interior floor are reachable as the
+keyword arguments ``top_q`` and ``min_interior``, whose defaults are exactly
+the module constants above. This makes a sensitivity analysis expressible
+without editing the module; it does not make the constants adjustable
+conventions. Any value other than the default takes the statistic outside
+the definition the manuscript reports, and must be declared as such.
 """
 
 from __future__ import annotations
@@ -105,7 +112,8 @@ def _baseline_mean(x, y, dense_max_n=DENSE_MAX_N):
     return float(np.mean(inner) / n)
 
 
-def prereq_index(x, y, delta=DELTA, dense_max_n=DENSE_MAX_N):
+def prereq_index(x, y, delta=DELTA, dense_max_n=DENSE_MAX_N,
+                 top_q=TOP_Q, min_interior=MIN_INTERIOR):
     """Prerelation coefficient of the ordered pair (x -> y).
 
     Parameters
@@ -118,6 +126,15 @@ def prereq_index(x, y, delta=DELTA, dense_max_n=DENSE_MAX_N):
     dense_max_n : int
         Sample size up to which the independence baseline is formed as a
         dense n x n matrix (bit-identical to the oracle).
+    top_q : float
+        Quantile defining the top-x stratum of the legitimacy check. The
+        default ``TOP_Q = 0.8`` is the fixed convention; the argument
+        exists so that the sensitivity of the statistic to it can be
+        measured, not so that it can be tuned.
+    min_interior : int
+        Absolute floor of the interior guard, which fires below
+        ``max(min_interior, 0.05 n)``. The default ``MIN_INTERIOR = 10``
+        is the fixed convention.
 
     Returns
     -------
@@ -142,14 +159,14 @@ def prereq_index(x, y, delta=DELTA, dense_max_n=DENSE_MAX_N):
     ceil_mask = u >= 1.0 - delta
     interior = u[~ceil_mask]
 
-    if interior.size < max(MIN_INTERIOR, 0.05 * n):
+    if interior.size < max(min_interior, 0.05 * n):
         q = 0.0
     else:
         t = np.sort(interior / (1.0 - delta))
         F = np.arange(1, t.size + 1) / t.size
         q = 1.0 - float(np.max(np.abs(F - t)))
 
-    x_top = x >= np.quantile(x, TOP_Q)
+    x_top = x >= np.quantile(x, top_q)
     p1_top = float(np.mean(ceil_mask[x_top])) if x_top.sum() > 0 else 1.0
     ell = 1.0 - max(0.0, p1_top - delta) / (1.0 - delta)
 
@@ -157,7 +174,8 @@ def prereq_index(x, y, delta=DELTA, dense_max_n=DENSE_MAX_N):
     return {"PI": a1 * a2, "A1": a1, "A2": a2, "q": q, "ell": ell}
 
 
-def direction(x, y, delta=DELTA, dense_max_n=DENSE_MAX_N):
+def direction(x, y, delta=DELTA, dense_max_n=DENSE_MAX_N,
+              top_q=TOP_Q, min_interior=MIN_INTERIOR):
     """Directional contrast of the pair.
 
     Returns
@@ -165,13 +183,18 @@ def direction(x, y, delta=DELTA, dense_max_n=DENSE_MAX_N):
     (delta_stat, pi_xy, pi_yx) : tuple of float
         ``delta_stat = pi_xy - pi_yx``. The order of the tuple follows the
         oracle so that parity tests can compare element by element.
+
+    Both directions are computed at the same ``top_q`` and
+    ``min_interior``; a contrast between two different settings would not
+    be a direction coefficient.
     """
-    pi_xy = prereq_index(x, y, delta, dense_max_n)["PI"]
-    pi_yx = prereq_index(y, x, delta, dense_max_n)["PI"]
+    pi_xy = prereq_index(x, y, delta, dense_max_n, top_q, min_interior)["PI"]
+    pi_yx = prereq_index(y, x, delta, dense_max_n, top_q, min_interior)["PI"]
     return pi_xy - pi_yx, pi_xy, pi_yx
 
 
-def perm_pvalue(x, y, n_perm=1000, seed=0, delta=DELTA, dense_max_n=DENSE_MAX_N):
+def perm_pvalue(x, y, n_perm=1000, seed=0, delta=DELTA, dense_max_n=DENSE_MAX_N,
+                top_q=TOP_Q, min_interior=MIN_INTERIOR):
     """Permutation test of independence for the forward statistic.
 
     Under the null of independence the joint law of the sample is invariant
@@ -196,8 +219,9 @@ def perm_pvalue(x, y, n_perm=1000, seed=0, delta=DELTA, dense_max_n=DENSE_MAX_N)
     """
     x, y = _as_pair(x, y)
     rng = np.random.default_rng(seed)
-    obs = prereq_index(x, y, delta, dense_max_n)["PI"]
+    obs = prereq_index(x, y, delta, dense_max_n, top_q, min_interior)["PI"]
     cnt = 0
     for _ in range(n_perm):
-        cnt += prereq_index(x, rng.permutation(y), delta, dense_max_n)["PI"] >= obs
+        cnt += prereq_index(x, rng.permutation(y), delta, dense_max_n,
+                            top_q, min_interior)["PI"] >= obs
     return obs, (cnt + 1) / (n_perm + 1)

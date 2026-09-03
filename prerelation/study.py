@@ -23,13 +23,20 @@ reps        number of replicates
 seed        base seed; replicate r uses seed + r
 noise       optional SD of additive noise, clipped back to [0, 1]
 delta       ceiling band width (default 0.05)
+top_q       top-x quantile of the legitimacy check (default 0.8)
+min_interior  absolute floor of the interior guard (default 10)
+
+``top_q`` and ``min_interior`` are carried in the config, and into every
+output row, for the same reason the seed is: a table swept over them is
+otherwise not reproducible from its own contents. Their defaults are the
+fixed conventions and any other value is outside the reported definition.
 """
 
 from __future__ import annotations
 
 import numpy as np
 
-from .core import DELTA, direction, prereq_index
+from .core import DELTA, MIN_INTERIOR, TOP_Q, direction, prereq_index
 
 __all__ = ["EXAMPLE_CONFIG", "generate_pair", "run_study"]
 
@@ -43,6 +50,8 @@ EXAMPLE_CONFIG = {
     "seed": 20260826,
     "noise": 0.0,
     "delta": DELTA,
+    "top_q": TOP_Q,
+    "min_interior": MIN_INTERIOR,
 }
 
 
@@ -105,14 +114,17 @@ def run_study(config):
     reps = int(cfg["reps"])
     base_seed = int(cfg["seed"])
     delta = float(cfg.get("delta", DELTA))
+    top_q = float(cfg.get("top_q", TOP_Q))
+    min_interior = int(cfg.get("min_interior", MIN_INTERIOR))
 
     rows = []
     for r in range(reps):
         seed_r = base_seed + r
         rng = np.random.default_rng(seed_r)
         x, y = generate_pair(cfg, rng)
-        res = prereq_index(x, y, delta)
-        d, pi_fwd, pi_rev = direction(x, y, delta)
+        res = prereq_index(x, y, delta, top_q=top_q, min_interior=min_interior)
+        d, pi_fwd, pi_rev = direction(x, y, delta, top_q=top_q,
+                                      min_interior=min_interior)
         rows.append(
             {
                 "name": cfg["name"],
@@ -123,6 +135,8 @@ def run_study(config):
                 "rep": r,
                 "seed": seed_r,
                 "delta_band": delta,
+                "top_q": top_q,
+                "min_interior": min_interior,
                 "PI": res["PI"],
                 "A1": res["A1"],
                 "A2": res["A2"],

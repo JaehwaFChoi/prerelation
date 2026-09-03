@@ -36,12 +36,73 @@ import numpy as np
 
 from prerelation.core import direction, perm_pvalue, prereq_index
 from prerelation.reference import pi_envelope
+from prerelation.scan import condense
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 N_PERM = 199
 PERM_SEED = 20260827
 DELTA = 0.05
 TOP_Q = 0.8
+
+
+# Graph fixtures for the condensation, shared with the JavaScript and R
+# packages. Held as literals: the condensation is a property of a graph, so
+# it needs no data file. The two cyclic ones are the cases the manuscript's
+# equivalence classes rest on and the ones no acyclic reduction can reach.
+GRAPHS = {
+    "chain_isolate": (["a1", "a2", "a3", "a4"],
+                      [("a1", "a2"), ("a1", "a3"), ("a2", "a3")]),
+    "two_cycle": (["a", "b", "c"],
+                  [("a", "b"), ("b", "a"), ("b", "c")]),
+    "shared_node": (["a1", "a2", "a3", "a4", "a5"],
+                    [("a1", "a2"), ("a2", "a1"), ("a2", "a3"),
+                     ("a3", "a4"), ("a4", "a2"), ("a4", "a5")]),
+    "no_edges": (["p", "q", "r"], []),
+    "diamond_redundant": (["A", "B", "C", "D"],
+                          [("A", "B"), ("B", "D"), ("A", "C"),
+                           ("C", "D"), ("A", "D")]),
+    "two_cycles_cross": (["a", "b", "c", "d"],
+                         [("a", "b"), ("b", "a"), ("c", "d"), ("d", "c"),
+                          ("b", "c"), ("a", "d")]),
+}
+
+# Settings for the sensitivity block. Every value is a departure from the
+# fixed convention and is pinned so that a change to the argument handling
+# cannot pass unnoticed; none of them is a recommended setting.
+SENS_TOP_Q = [0.6, 0.95]
+SENS_MIN_INTERIOR = [0, 200]
+
+
+def condensation_record(nodes, edges):
+    """Canonical rendering, class ids offset to one as the ports render them."""
+    r = condense(nodes, edges)
+    return {
+        "classes": "|".join("+".join(c) for c in r.classes),
+        "class_of": ",".join("%s:%d" % (u, r.class_of[u] + 1) for u in nodes),
+        "quotient": "-" if not r.quotient_edges else ",".join(
+            "%d>%d" % (a + 1, b + 1) for a, b in r.quotient_edges),
+        "hasse": "-" if not r.hasse_edges else ",".join(
+            "%d>%d" % (a + 1, b + 1) for a, b in r.hasse_edges),
+    }
+
+
+def sensitivity_record(x, y):
+    """PI and q away from the default top_q and min_interior.
+
+    The defaults are the fixed convention; these entries exist so that the
+    keyword arguments added in 0.4.0 are covered by the contract rather than
+    merely present in the signature.
+    """
+    out = {}
+    for t in SENS_TOP_Q:
+        r = prereq_index(x, y, top_q=t)
+        out["top_q_%g_PI" % t] = repr(r["PI"])
+        out["top_q_%g_ell" % t] = repr(r["ell"])
+    for mi in SENS_MIN_INTERIOR:
+        r = prereq_index(x, y, min_interior=mi)
+        out["min_interior_%d_PI" % mi] = repr(r["PI"])
+        out["min_interior_%d_q" % mi] = repr(r["q"])
+    return out
 
 
 def ceiling(x):
@@ -157,6 +218,7 @@ def main():
 
     expected = {"_contract": {"n_perm": N_PERM, "perm_seed": PERM_SEED,
                               "delta": DELTA, "top_q": TOP_Q}}
+    sensitivity = {}
     for name, (x, y) in fixtures.items():
         with open(os.path.join(HERE, f"fixture_{name}.csv"), "w") as fh:
             fh.write("x,y\n")
@@ -172,12 +234,18 @@ def main():
         assert p_pkg == p_matrix, (name, p_pkg, p_matrix)
         comp["perm_p"] = repr(p_matrix)
         expected[name] = comp
+        sensitivity[name] = sensitivity_record(x, y)
+
+    expected["_condense"] = {name: condensation_record(*g)
+                             for name, g in GRAPHS.items()}
+    expected["_sensitivity"] = sensitivity
 
     with open(os.path.join(HERE, "expected.json"), "w") as fh:
         json.dump(expected, fh, indent=2, sort_keys=True)
     print("fixtures:", ", ".join(sorted(fixtures)))
     print("perm matrices:", ", ".join(f"n{n}" for n in sorted(perm)))
     print("package p == matrix p for every fixture: OK")
+    print("condensation fixtures:", ", ".join(sorted(GRAPHS)))
 
 
 if __name__ == "__main__":

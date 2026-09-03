@@ -64,7 +64,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from . import core
-from .core import DELTA, DENSE_MAX_N, MIN_INTERIOR, prereq_index
+from .core import DELTA, DENSE_MAX_N, MIN_INTERIOR, TOP_Q, prereq_index
 
 __all__ = [
     "Admissibility",
@@ -240,11 +240,11 @@ def _rescaled_interior(x, y, delta):
     return t, x.size
 
 
-def _guard_fires(m, n):
-    return m < max(MIN_INTERIOR, 0.05 * n)
+def _guard_fires(m, n, min_interior=MIN_INTERIOR):
+    return m < max(min_interior, 0.05 * n)
 
 
-def interior_q(x, y, F0=None, delta=DELTA):
+def interior_q(x, y, F0=None, delta=DELTA, min_interior=MIN_INTERIOR):
     """The interior component ``q`` computed against a declared reference.
 
     ``q(F0) = 1 - max_i |i/m - F0(t_(i))|`` over the sorted rescaled
@@ -254,7 +254,7 @@ def interior_q(x, y, F0=None, delta=DELTA):
     """
     t, n = _rescaled_interior(x, y, delta)
     m = t.size
-    if _guard_fires(m, n):
+    if _guard_fires(m, n, min_interior):
         return 0.0
     F = np.arange(1, m + 1) / m
     if F0 is None:
@@ -264,7 +264,8 @@ def interior_q(x, y, F0=None, delta=DELTA):
     return 1.0 - float(np.max(np.abs(F - s)))
 
 
-def prereq_index_family(x, y, F0=None, delta=DELTA, dense_max_n=DENSE_MAX_N):
+def prereq_index_family(x, y, F0=None, delta=DELTA, dense_max_n=DENSE_MAX_N,
+                        top_q=TOP_Q, min_interior=MIN_INTERIOR):
     """The family member ``PI(F0)``: the coefficient at a declared reference.
 
     Composed from the definition's own components rather than recomputed:
@@ -287,15 +288,17 @@ def prereq_index_family(x, y, F0=None, delta=DELTA, dense_max_n=DENSE_MAX_N):
     dict with keys ``PI``, ``A1``, ``A2``, ``q``, ``ell``, ``reference``
     (the name of ``F0`` if it has one, else ``"Uniform(0,1)"``).
     """
-    res = prereq_index(x, y, delta=delta, dense_max_n=dense_max_n)
-    q = interior_q(x, y, F0, delta=delta)
+    res = prereq_index(x, y, delta=delta, dense_max_n=dense_max_n,
+                       top_q=top_q, min_interior=min_interior)
+    q = interior_q(x, y, F0, delta=delta, min_interior=min_interior)
     a2 = q * res["ell"]
     name = "Uniform(0,1)" if F0 is None else getattr(F0, "__name__", "F0")
     return {"PI": res["A1"] * a2, "A1": res["A1"], "A2": a2, "q": q,
             "ell": res["ell"], "reference": name}
 
 
-def pi_envelope(x, y, delta=DELTA, dense_max_n=DENSE_MAX_N):
+def pi_envelope(x, y, delta=DELTA, dense_max_n=DENSE_MAX_N,
+                top_q=TOP_Q, min_interior=MIN_INTERIOR):
     """The exact upper envelope of the prerelation coefficient over ``B``.
 
     Returns
@@ -315,12 +318,13 @@ def pi_envelope(x, y, delta=DELTA, dense_max_n=DENSE_MAX_N):
     When the interior guard fires, ``q`` is ``0`` for every reference by
     definition, so ``sup_q = inf_q = PI_hi = 0``.
     """
-    res = prereq_index(x, y, delta=delta, dense_max_n=dense_max_n)
+    res = prereq_index(x, y, delta=delta, dense_max_n=dense_max_n,
+                       top_q=top_q, min_interior=min_interior)
     t, n = _rescaled_interior(x, y, delta)
     m = t.size
     out = {"A1": res["A1"], "ell": res["ell"], "q": res["q"], "PI": res["PI"], "m": m}
 
-    if _guard_fires(m, n):
+    if _guard_fires(m, n, min_interior):
         out.update(
             {"PI_hi": 0.0, "sup_q": 0.0, "inf_q": 0.0, "D_star": 0.0,
              "n_tail": 0, "attained": True}

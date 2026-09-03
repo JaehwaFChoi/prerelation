@@ -64,7 +64,31 @@ these literally:
    implement the same convention explicitly.
 7. **Fixed constants**: `delta = 0.05`, `TOP_Q = 0.8`, `MIN_INTERIOR = 10`.
    A small-sample adaptation of `TOP_Q` is an open question and must not be
-   introduced on one side only.
+   introduced on one side only. Since Python 0.4.0 `top_q` and
+   `min_interior` are reachable as keyword arguments whose defaults are these
+   constants; that is an API difference, not a parity difference, and the
+   contract below is stated at the defaults.
+
+## Which layers are compared, and between how many implementations
+
+The contract is over **computed quantities at the default settings**, not over
+API surface, and it does not cover every layer to the same depth.
+
+- **Three-way** (Python, JavaScript, R): the coefficient and its components,
+  the direction coefficient, the permutation p-value against the committed
+  index matrices, the pairwise scan, the admissible reference class and the
+  envelope. These are the layers the golden fixtures pin.
+- **Two-way** (Python, JavaScript): **condensation**. R's `condense` is a
+  transcription of the JavaScript implementation down to variable roles, so
+  the two cannot disagree and R is not an independent voice on this layer.
+  Python's own `condense` arrived only in 0.4.0 — **condensation had no Python
+  original before this release**, which is why the cyclic graph fixtures, the
+  ones the manuscript's equivalence classes rest on, had no arbiter. The
+  Python implementation is written from the specification and uses a different
+  algorithm, and it is additionally checked against a reachability-closure
+  verifier committed in `tests/test_condense.py`.
+- **Python only**: the ceiling fit, the plausible-value layer and the study
+  runner. `prerelation-r` declares this narrower scope explicitly.
 
 ## Exact-zero versus tolerance
 

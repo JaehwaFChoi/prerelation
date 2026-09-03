@@ -1,5 +1,80 @@
 # Changelog
 
+## 0.4.0 — 2026-09-03
+
+Additive. **Every one of the 124 golden keys is bit-identical to 0.3.2** — not
+agreeing to a tolerance, bit-identical — and the fixture CSVs and permutation
+index matrices are byte-identical. Two things are added and nothing is changed.
+
+### Added
+
+- `condense(nodes, edges)`, in `scan`, returning a `Condensation` with
+  `classes`, `class_of`, `quotient_edges` and `hasse_edges`. Each strongly
+  connected component becomes one class and the acyclic quotient is
+  transitively reduced. `transitive_reduction` is unchanged: it is defined
+  only for an acyclic graph and still raises on a cycle, and `condense` is
+  what handles cycles.
+
+  This function existed in the JavaScript and R packages but had **no Python
+  original**, so the declared reference implementation was missing something
+  the method's own description requires. It is written here from that
+  description rather than translated from either existing copy, and it uses
+  Kosaraju's two-pass search where both ports use an iterative Tarjan — a
+  translation would have produced a third copy rather than a third answer.
+  It is checked against the JavaScript port on the six shared graph fixtures,
+  against the R package's own recorded expectations, and against an
+  independent reachability-closure verifier that is not a component algorithm
+  at all (`tests/test_condense.py`).
+
+- `top_q` and `min_interior` as keyword arguments to `prereq_index`,
+  `direction` and `perm_pvalue`, threaded through `reference.interior_q`,
+  `reference.prereq_index_family`, `reference.pi_envelope` and
+  `study.run_study`. `run_study` accepts them as config keys and carries them
+  into every output row, so a table swept over them stays reproducible from
+  its own contents.
+
+  **The defaults are exactly the existing module constants** — `TOP_Q = 0.8`,
+  `MIN_INTERIOR = 10`, with the interior floor still `max(min_interior,
+  0.05 n)` — and `DELTA`, `TOP_Q` and `MIN_INTERIOR` keep their values. The
+  arguments exist so that the sensitivity of the statistic to these choices
+  can be measured without editing the module. They do not make the constants
+  adjustable conventions: any value other than the default puts the statistic
+  outside the definition the manuscript reports.
+
+### Where the version number lives
+
+`README.md` no longer states a version. It said `0.2.0` through the 0.3.0,
+0.3.1 and 0.3.2 releases, and updating it here would have re-laid the same
+trap for the next release, so the number was removed rather than corrected;
+the file now points at this changelog and at the concept DOI
+`10.5281/zenodo.22132819`, which resolves to every version and cannot go
+stale. The README's per-version archive DOI went with it for the same reason.
+
+After that sweep the version exists in exactly two places:
+
+- **The distribution metadata (`pyproject.toml`) is authoritative.**
+  `__version__` is derived from it and is not a second copy.
+- **`CITATION.cff` is the one maintained copy**, and it is maintained
+  deliberately because Zenodo requires the field. It is named here so that it
+  is a recorded exception rather than an unmarked second source: when the
+  version moves, this is the file that moves with `pyproject.toml`, and it is
+  the only one.
+
+No CI check compares the two. A check that compares two copies of a value is
+not a check, and removing copies is what removes the need for one. Everything
+else that looks like a version string is a dependency constraint, the CFF
+schema version, the `0.0.0+unknown` sentinel for an uninstalled source tree,
+or a historical statement about which release something arrived in -- none of
+which goes stale.
+
+### Cross-language scope
+
+The JavaScript and R packages are **not** changed in this release and do not
+carry the new keyword arguments. The parity contract is over computed
+quantities at the default settings, not over API surface, so it is unaffected;
+`prerelation-r` already declares a narrower scope. The asymmetry is stated
+here rather than left to be discovered.
+
 ## 0.3.2 — 2026-09-02
 
 Test-only and metadata. **The library's computational behaviour is unchanged.**

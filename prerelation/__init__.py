@@ -30,7 +30,8 @@ coefficient itself is model-free.
 Modules
 -------
 ``core``     Pi, Delta and the permutation test (numpy only)
-``scan``     all pairs, BH-FDR, cycle check, transitive reduction
+``scan``     all pairs, BH-FDR, cycle check, transitive reduction,
+             condensation of a cyclic edge set
 ``ceiling``  monotone quantile ceiling and the ceiling-referenced variant
 ``pv``       plausible-value correction for scoring error (optional extra)
 ``reference`` the admissible reference class and the exact upper envelope
@@ -62,7 +63,8 @@ from .ceiling import CeilingFit, ceiling_fit, prereq_index_referenced
 from .core import DELTA, MIN_INTERIOR, TOP_Q, direction, perm_pvalue, prereq_index
 from .pv import ctm_posterior, draw_pv, pv_correct
 from .reference import Admissibility, admissibility, interior_q, pi_envelope, prereq_index_family
-from .scan import ScanResult, bh_fdr, find_cycles, scan as scan_pairs, transitive_reduction
+from .scan import (Condensation, ScanResult, bh_fdr, condense, find_cycles,
+                   scan as scan_pairs, transitive_reduction)
 from .study import EXAMPLE_CONFIG, run_study
 
 try:  # single source of truth: the installed distribution metadata
@@ -84,6 +86,8 @@ __all__ = [
     "bh_fdr",
     "find_cycles",
     "transitive_reduction",
+    "condense",
+    "Condensation",
     # ceiling
     "ceiling_fit",
     "CeilingFit",

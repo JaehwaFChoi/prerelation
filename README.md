@@ -173,14 +173,22 @@ regenerates every golden output from the fixtures and asserts equality at
 ## Citation
 
 The methodological paper introducing the coefficient is in preparation. To
-cite the software, use the metadata in `CITATION.cff` (concept DOI
-[10.5281/zenodo.22132819](https://doi.org/10.5281/zenodo.22132819), all versions;
-v0.2.0 archive: 10.5281/zenodo.22132820).
+cite the software, use the metadata in `CITATION.cff`. The concept DOI
+[10.5281/zenodo.22132819](https://doi.org/10.5281/zenodo.22132819) resolves to
+every version, including the current one, so it is the DOI to cite unless a
+specific archived version is meant; the per-version DOIs are listed on the
+Zenodo record itself rather than copied here.
 
 ## Status
 
-`0.2.0` — first public release. The API is settled enough to build on; the
-numbers in the test suite are verification fixtures rather than results.
+The API is settled enough to build on; the numbers in the test suite are
+verification fixtures rather than results.
+
+**This file deliberately carries no version number.** The version lives in the
+distribution metadata, `__version__` is derived from it, and `CHANGELOG.md`
+records what each release changed. A number written here would be a copy that
+has to be maintained, and it was wrong for three releases before anyone
+noticed.
 
 ## License
 

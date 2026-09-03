@@ -16,6 +16,7 @@ import pytest
 
 from prerelation.core import direction, prereq_index
 from prerelation.reference import pi_envelope
+from prerelation.scan import condense
 
 GOLDEN = os.path.join(os.path.dirname(os.path.abspath(__file__)), "golden")
 TOL = 1e-12
@@ -24,6 +25,79 @@ with open(os.path.join(GOLDEN, "expected.json")) as _fh:
     EXPECTED = json.load(_fh)
 CONTRACT = EXPECTED["_contract"]
 FIXTURES = sorted(k for k in EXPECTED if not k.startswith("_"))
+CONDENSE = EXPECTED["_condense"]
+SENSITIVITY = EXPECTED["_sensitivity"]
+
+# Graph fixtures, held here as literals exactly as the generator holds them.
+# A condensation is a property of a graph and needs no data file.
+GRAPHS = {
+    "chain_isolate": (["a1", "a2", "a3", "a4"],
+                      [("a1", "a2"), ("a1", "a3"), ("a2", "a3")]),
+    "two_cycle": (["a", "b", "c"],
+                  [("a", "b"), ("b", "a"), ("b", "c")]),
+    "shared_node": (["a1", "a2", "a3", "a4", "a5"],
+                    [("a1", "a2"), ("a2", "a1"), ("a2", "a3"),
+                     ("a3", "a4"), ("a4", "a2"), ("a4", "a5")]),
+    "no_edges": (["p", "q", "r"], []),
+    "diamond_redundant": (["A", "B", "C", "D"],
+                          [("A", "B"), ("B", "D"), ("A", "C"),
+                           ("C", "D"), ("A", "D")]),
+    "two_cycles_cross": (["a", "b", "c", "d"],
+                         [("a", "b"), ("b", "a"), ("c", "d"), ("d", "c"),
+                          ("b", "c"), ("a", "d")]),
+}
+
+
+@pytest.mark.parametrize("name", sorted(CONDENSE))
+def test_condensation_pinned(name):
+    """The condensation is pinned in the same rendering the ports print.
+
+    Class ids are offset to one here because the R package labels from one;
+    the rendering is what the cross-language comparison reads, so it is the
+    rendering that is pinned.
+    """
+    nodes, edges = GRAPHS[name]
+    r = condense(nodes, edges)
+    exp = CONDENSE[name]
+    assert "|".join("+".join(c) for c in r.classes) == exp["classes"]
+    assert ",".join("%s:%d" % (u, r.class_of[u] + 1) for u in nodes) == exp["class_of"]
+    quotient = "-" if not r.quotient_edges else ",".join(
+        "%d>%d" % (a + 1, b + 1) for a, b in r.quotient_edges)
+    hasse = "-" if not r.hasse_edges else ",".join(
+        "%d>%d" % (a + 1, b + 1) for a, b in r.hasse_edges)
+    assert quotient == exp["quotient"]
+    assert hasse == exp["hasse"]
+
+
+@pytest.mark.parametrize("name", sorted(SENSITIVITY))
+def test_non_default_top_q_and_min_interior_pinned(name):
+    """The 0.4.0 keyword arguments are covered by the contract, not merely present.
+
+    None of these settings is a recommended one: the fixed conventions are
+    delta = 0.05, TOP_Q = 0.8 and MIN_INTERIOR = 10, and the values here are
+    departures from them, pinned so that a change to how the arguments are
+    threaded cannot pass unnoticed.
+    """
+    x, y = load_fixture(name)
+    exp = SENSITIVITY[name]
+    for key, value in exp.items():
+        setting, _, component = key.rpartition("_")
+        if setting.startswith("top_q_"):
+            res = prereq_index(x, y, top_q=float(setting[len("top_q_"):]))
+        else:
+            res = prereq_index(x, y,
+                               min_interior=int(setting[len("min_interior_"):]))
+        assert abs(res[component] - float(value)) <= TOL, key
+
+
+def test_the_defaults_are_still_the_fixed_conventions():
+    """The arguments must not have moved the definition (P4-P1)."""
+    from prerelation.core import DELTA, MIN_INTERIOR, TOP_Q
+    assert (DELTA, TOP_Q, MIN_INTERIOR) == (0.05, 0.8, 10)
+    assert CONTRACT["delta"] == DELTA and CONTRACT["top_q"] == TOP_Q
+    x, y = load_fixture("product")
+    assert prereq_index(x, y) == prereq_index(x, y, top_q=TOP_Q,
+                                              min_interior=MIN_INTERIOR)
 
 
 def load_fixture(name):

@@ -12,6 +12,12 @@ common anchored scale and returns
   (Aho, Garey and Ullman, 1972: for a directed acyclic graph the transitive
   reduction is unique and is a subgraph of the original).
 
+``condense`` covers the case the reduction cannot: when the screened edges
+contain a cycle, each strongly connected component becomes one class and the
+acyclic quotient is transitively reduced. A cycle is not a failure of the
+screen -- it is mutual dominance, and the class is how the preorder records
+it.
+
 The reduction is what turns a screen into a readable diagram: it removes
 the edges that are already implied by a longer path, leaving a Hasse-like
 picture of the recovered ordering.
@@ -35,7 +41,8 @@ import numpy as np
 
 from .core import DELTA, prereq_index
 
-__all__ = ["ScanResult", "scan", "bh_fdr", "find_cycles", "transitive_reduction"]
+__all__ = ["ScanResult", "Condensation", "scan", "bh_fdr", "condense",
+           "find_cycles", "transitive_reduction"]
 
 
 def bh_fdr(pvalues):
@@ -116,6 +123,171 @@ def find_cycles(nodes: Sequence[str], edges: Sequence[Tuple[str, str]]):
         if colour[u] == 0:
             visit(u)
     return cycles
+
+
+@dataclass(frozen=True)
+class Condensation:
+    """The condensation of a screened edge set.
+
+    Attributes
+    ----------
+    classes : list of list of str
+        The strongly connected components, one per class. Each class is
+        listed in ``nodes`` order and the classes are ordered by their
+        first member, so the labelling is a function of ``nodes`` alone.
+    class_of : dict of str -> int
+        Node to index into ``classes`` (zero-based, as elsewhere in this
+        package; the R port labels from one).
+    quotient_edges : list of (int, int)
+        Edges of the quotient graph, between distinct classes and
+        deduplicated, in order of first appearance in ``edges``.
+    hasse_edges : list of (int, int)
+        Transitive reduction of the quotient, which is unique because the
+        quotient is acyclic.
+    """
+
+    classes: List[List[str]]
+    class_of: Dict[str, int]
+    quotient_edges: List[Tuple[int, int]]
+    hasse_edges: List[Tuple[int, int]]
+
+    def __repr__(self):  # pragma: no cover - display only
+        return (
+            f"Condensation(nodes={len(self.class_of)}, "
+            f"classes={len(self.classes)}, "
+            f"quotient={len(self.quotient_edges)}, "
+            f"hasse={len(self.hasse_edges)})"
+        )
+
+
+def _components_kosaraju(nodes, adj, radj):
+    """Strongly connected components by Kosaraju's two-pass search.
+
+    Both passes are iterative, so the recursion limit does not bound the
+    graph size. The choice of algorithm is deliberate: the two existing
+    implementations of this package's condensation (JavaScript, and R
+    translated from it) both run an iterative Tarjan, so a Tarjan here
+    would be a third copy rather than a third answer. The strongly
+    connected partition is an algorithm-independent property of the graph,
+    which is what makes the disagreement of two methods informative.
+    """
+    visited = set()
+    finish_order = []
+    for start in nodes:
+        if start in visited:
+            continue
+        visited.add(start)
+        stack = [(start, iter(adj[start]))]
+        while stack:
+            u, neighbours = stack[-1]
+            advanced = False
+            for v in neighbours:
+                if v not in visited:
+                    visited.add(v)
+                    stack.append((v, iter(adj[v])))
+                    advanced = True
+                    break
+            if not advanced:
+                finish_order.append(u)
+                stack.pop()
+
+    components = []
+    assigned = set()
+    for start in reversed(finish_order):
+        if start in assigned:
+            continue
+        assigned.add(start)
+        component = [start]
+        work = [start]
+        while work:
+            u = work.pop()
+            for v in radj[u]:
+                if v not in assigned:
+                    assigned.add(v)
+                    component.append(v)
+                    work.append(v)
+        components.append(component)
+    return components
+
+
+def condense(nodes, edges):
+    """Condensation of a directed graph: classes, quotient, Hasse diagram.
+
+    Each strongly connected component becomes one class, and the quotient
+    over those classes -- acyclic by construction -- is transitively
+    reduced. This is the object a scan reports when the screened edge set
+    contains a cycle: mutual dominance is read as one equivalence class of
+    the dominance preorder rather than as a contradiction, and the reduced
+    quotient is the diagram the classes are drawn on.
+
+    Unlike :func:`transitive_reduction`, which is defined only for an
+    acyclic graph and raises otherwise, ``condense`` is defined for every
+    directed graph. The two are complementary and neither replaces the
+    other: on an acyclic input every class is a singleton and the Hasse
+    edges are the transitive reduction of the original edges.
+
+    Parameters
+    ----------
+    nodes : sequence of str
+        The full node set. Order is the labelling convention: classes are
+        sorted internally by it, and then among themselves by their first
+        member, so ``condense`` is a function of the arguments alone.
+    edges : sequence of (source, target)
+        Directed edges. Repeated edges and edges inside a class are
+        absorbed by the quotient.
+
+    Returns
+    -------
+    Condensation
+
+    Notes
+    -----
+    What the classes mean is a matter of the preorder the scan recovers,
+    not of the graph algorithm: a class collects attributes that bound
+    each other's attainment, which happens both when two attributes are
+    genuinely equivalent and when the screen cannot separate them. A class
+    of size greater than one is a statement about what the scan could not
+    resolve.
+    """
+    nodes = list(nodes)
+    known = set(nodes)
+    if len(known) != len(nodes):
+        raise ValueError("nodes must not repeat")
+    edges = [(u, v) for u, v in edges]
+    unknown = {u for pair in edges for u in pair} - known
+    if unknown:
+        raise ValueError(f"edges reference nodes not in the node set: {sorted(unknown)}")
+
+    adj = {u: [] for u in nodes}
+    radj = {u: [] for u in nodes}
+    for u, v in edges:
+        adj[u].append(v)
+        radj[v].append(u)
+
+    position = {u: i for i, u in enumerate(nodes)}
+    components = _components_kosaraju(nodes, adj, radj)
+    classes = sorted(
+        (sorted(comp, key=position.__getitem__) for comp in components),
+        key=lambda comp: position[comp[0]],
+    )
+    class_of = {u: ci for ci, comp in enumerate(classes) for u in comp}
+
+    quotient_edges = []
+    seen = set()
+    for u, v in edges:
+        cu, cv = class_of[u], class_of[v]
+        if cu == cv or (cu, cv) in seen:
+            continue
+        seen.add((cu, cv))
+        quotient_edges.append((cu, cv))
+
+    hasse_edges = transitive_reduction(list(range(len(classes))), quotient_edges)
+    return Condensation(
+        classes=classes,
+        class_of=class_of,
+        quotient_edges=quotient_edges,
+        hasse_edges=hasse_edges,
+    )
 
 
 @dataclass
